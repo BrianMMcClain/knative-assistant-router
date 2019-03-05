@@ -1,0 +1,16 @@
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: knative-assistant-router
+  namespace: default
+spec:
+  runLatest:
+    configuration:
+      revisionTemplate:
+        spec:
+          container:
+            image: docker.io/brianmmcclain/knative-assistant-router:latest
+            imagePullPolicy: Always
+            env:
+            - name: ROUTER_DOMAIN
+              value: "default.dev.gswkbook.com"
