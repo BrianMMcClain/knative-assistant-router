@@ -1,0 +1,5 @@
+---
+applications: 
+- name: home-assistant-router
+  instances: 1
+  memory: 1GB

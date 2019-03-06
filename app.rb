@@ -26,3 +26,7 @@ post '/' do
     jBody = JSON.parse(body)
     return dispatch(jBody["queryResult"]["intent"]["displayName"], jBody["queryResult"]["parameters"])
 end
+
+get '/' do
+    return "Welcome!"
+end
