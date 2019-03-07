@@ -11,7 +11,7 @@ end
 
 def dispatch(intentName, params)
     uri = "http://#{intentName.downcase}.#{@routerDomain}"
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type" => "application/json"}
     puts "Invoking action URI: #{uri}"
     response = HTTParty.post(uri, :headers => headers, :body => params.to_json)
     puts "ACTION RESPONSE: #{response.body}"
