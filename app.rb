@@ -25,20 +25,30 @@ configure do
     @@refresh = nil
 end
 
-def dispatch(intentName, params)
+def dispatch(intentName, params, fullRequest)
     uri = "http://#{intentName.downcase}.#{@routerDomain}"
     headers = {"Content-Type" => "application/json"}
     puts "Invoking action URI: #{uri}"
 
     if intentName.downcase == "spotify"
+        if Time.new > @@expires
+            refreshToken()
+        end
         params["token"] = @@token
     end
 
     puts "With params: #{params.to_json}"
 
     response = HTTParty.post(uri, :headers => headers, :body => params.to_json)
-    puts "ACTION RESPONSE: #{response.body}"
-    return build_response(response.body)
+
+    # 404 from backend service
+    if response.code == 404
+        puts "ENOBACKEND: 404"
+        return fullRequest["queryResult"]["fulfillmentText"]
+    else
+        puts "ACTION RESPONSE: #{response.body}"
+        return build_response(response.body)
+    end
 end
 
 def build_response(resp)
@@ -49,12 +59,12 @@ post '/' do
     body = request.body.read
     puts body
     jBody = JSON.parse(body)
-    return dispatch(jBody["queryResult"]["intent"]["displayName"], jBody["queryResult"]["parameters"])
+    return dispatch(jBody["queryResult"]["intent"]["displayName"], jBody["queryResult"]["parameters"], jBody)
 end
 
 get '/' do
-    if not @@code.nil?
-        return "Logged in to Spotify"
+    if not @@code.nil? and Time.now < @@expires
+        return "Logged in to Spotify! Token expires in #{(@@expires - Time.now).floor} seconds"
     else
         return "Welcome!"
     end
@@ -90,4 +100,23 @@ get '/token' do
     @@refresh = jBody["refresh_token"]
 
     redirect "/"
+end
+
+def refreshToken
+    puts "Refreshing token"
+    body = {
+        "grant_type": "refresh_token",
+        "refresh_token": @@refresh
+    }
+
+    encodedAuth = Base64.strict_encode64("#{@spotifyClient}:#{@spotifySecret}")
+    headers = {
+        "Authorization": "Basic #{encodedAuth}"
+    }
+
+    response = HTTParty.post("https://accounts.spotify.com/api/token", :body => body, :headers => headers)
+    jBody = JSON.parse(response.body)
+
+    @@token = jBody["access_token"]
+    @@expires = Time.now + jBody["expires_in"].to_i
 end
